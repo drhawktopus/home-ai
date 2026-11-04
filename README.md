@@ -8,7 +8,7 @@
 
 I'm anti-cloud, and yes, anti Sam Altman. I think people are losing touch with what AI actually takes to run, in power and in the data centers being built for it. If you want to use AI, I think it should run on hardware you own, in your own home.
 
-I'm not a purist about it. I bring in frontier models as hired help for specialist work, and Claude and Codex helped me build this lab. But the AI my household uses every day runs on machines in my house.
+I'm not a purist about it. Frontier models are hired help here: I designed this lab and directed the work, Claude did most of the implementation, and we went through the results together. But the AI my household uses every day runs on machines in my house.
 
 The goal has always been simple: take any piece of hardware that comes home, add it to the system, and have the system use it to get more capable. I also want other people to be able to do the same with what they've got. Not everybody has a pile of GPUs.
 
@@ -165,7 +165,7 @@ You don't need a lab like mine to use any of this. What carries over:
 
 When I started, the ceiling felt like a small Mistral on an 8 GB card, answering questions about my documents. What changed most since then wasn't the models; it was everything around them. Each round of better plumbing, from measuring every box and putting work where it fits, to making sure the settings actually reach the model, keeping long jobs alive through restarts and giving the assistant a library to read, made room for a bigger, more capable model, and those models then helped build the next round. That's how the same class of card went from running a document bot to running a 35B model that does real work.
 
-I built it with Claude and Codex as hired help: they design, review and fix, and the local lab does the daily work. That's the same rule the lab runs by. Frontier models are contractors brought in for specialty work; the AI you use every day lives on your own hardware. HAI isn't a build in progress anymore: it's the part of the lab my household actually uses every day.
+HAI isn't a build in progress anymore. It's the part of the lab my household actually uses every day, and the next piece of hardware that comes home will get measured and put to work the same way.
 
 ## More detail
 
