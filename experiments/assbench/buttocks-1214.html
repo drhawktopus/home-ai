@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>figure</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse 84% 72% at 50% 40%, #2b333c 0%, #1d2329 52%, #12161c 100%);
+  }
+  #stage { width: 100%; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
+
+/* =====================================================================
+   ANATOMY.  Centimetres.  Origin at the centre of the figure.
+   y = up, z = front (+z is the front of the body).  Signed distance:
+   negative inside the solid.  The figure runs from the waist (y = 21)
+   to mid-thigh (y = -21).
+   ===================================================================== */
+
+const RES  = 120;
+const HALF = 24;
+const CELL = (2 * HALF) / RES;
+
+const Y_WAIST  = 21;
+const Y_BOTTOM = -21;
+const THICK = 0.5;                  // swimwear thickness, cm
+
+// Gluteal mass centre (slight real-world asymmetry).
+const GL = { x: 6.8, y: 0.4, z: -6.4, a: 9.6, b: 9.3, c: 8.4 };
+
+function smin(a, b, r) {
+  const h = r - Math.abs(a - b);
+  return h > 0 ? Math.min(a, b) - (h * h) / (4 * r) : Math.min(a, b);
+}
+function smax(a, b, r) { return -smin(-a, -b, r); }
+function max0(a, b) { return a > b ? a : b; }
+
+// Approximate signed distance to an ellipsoid surface (exact for a sphere).
+function ell(x, y, z, cx, cy, cz, a, b, c) {
+  const dx = x - cx, dy = y - cy, dz = z - cz;
+  const q = (dx * dx) / (a * a) + (dy * dy) / (b * b) + (dz * dz) / (c * c);
+  const g = Math.sqrt(dx * dx / (a * a * a * a) + dy * dy / (b * b * b * b) + dz * dz / (c * c * c * c));
+  return (Math.sqrt(q) - 1) / (g > 1e-6 ? g : 1e-6);
+}
+
+function segDist(x, y, z, ax, ay, az, bx, by, bz) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const l2 = dx * dx + dy * dy + dz * dz;
+  let t = l2 > 1e-9 ? ((x - ax) * dx + (y - ay) * dy + (z - az) * dz) / l2 : 0;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  const ex = x - (ax + dx * t), ey = y - (ay + dy * t), ez = z - (az + dz * t);
+  return Math.sqrt(ex * ex + ey * ey + ez * ez);
+}
+
+// Tapered thigh: a separate lobe on each side, running all the way to the groin.
+function thigh(x, y, z, s) {
+  let t = (-3 - y) / 18;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  const cx = s * (9.4 - 1.4 * t);
+  const cz = -2.2 - 1.2 * t;
+  const rx = 7.4 - 0.6 * t;
+  const rz = 7.0 - 0.8 * t;
+  const dx = x - cx, dz = z - cz;
+  const q = (dx * dx) / (rx * rx) + (dz * dz) / (rz * rz);
+  const g = Math.sqrt(dx * dx / (rx * rx * rx * rx) + dz * dz / (rz * rz * rz * rz));
+  let d = (Math.sqrt(q) - 1) / (g > 1e-6 ? g : 1e-6);
+  if (y > -3) d = max0(d, y + 3);
+  if (y < Y_BOTTOM) d = Math.max(d, Y_BOTTOM - y);
+  return d;
+}
+
+// Intergluteal cleft axis.
+const CLEFT = { ax: 0, ay: 6, az: -11.4, bx: 0, by: -7, bz: -10.9, r: 2.7, depth: 2.6 };
+
+function bodyField(x, y, z) {
+  const cheekL = ell(x, y, z, -GL.x, GL.y, GL.z, GL.a, GL.b, GL.c);
+  const cheekR = ell(x, y, z,  GL.x, GL.y + 0.3, GL.z, GL.a, GL.b, GL.c);
+  const thL = thigh(x, y, z, -1);
+  const thR = thigh(x, y, z,  1);
+
+  // Lower torso: the waist, narrower than the hips.
+  let f = ell(x, y, z, 0, 15, 1.6, 13.6, 12.2, 10.6);
+  // Pelvis and hip mass.
+  f = smin(f, ell(x, y, z, 0, 3, -1.4, 16.2, 10.6, 10.4), 3.0);
+  // Gluteus maximus.
+  f = smin(f, cheekL, 2.6);
+  f = smin(f, cheekR, 2.6);
+  // Greater trochanters: the bony fullness at the outer hip.
+  f = smin(f, ell(x, y, z, -14.8, 2.4, -1.4, 3.4, 6.2, 5.2), 1.8);
+  f = smin(f, ell(x, y, z,  14.8, 2.4, -1.4, 3.4, 6.2, 5.2), 1.8);
+  // Thighs.
+  f = smin(f, thL, 2.2);
+  f = smin(f, thR, 2.2);
+  // Mons pubis / lower abdominal fullness at the front.
+  f = smin(f, ell(x, y, z, 0, 4, 6.8, 7.2, 6.0, 4.2), 2.2);
+  // Hip bones just under the skin at the front of the waist.
+  f = smin(f, ell(x, y, z, -11.2, 11.5, 5.2, 2.6, 3.6, 2.6), 1.5);
+  f = smin(f, ell(x, y, z,  11.2, 11.5, 5.2, 2.6, 3.6, 2.6), 1.5);
+  // Tensor fasciae latae / outer hip fullness.
+  f = smin(f, ell(x, y, z, -13.4, 6.0, 2.2, 3.4, 4.6, 4.2), 1.6);
+  f = smin(f, ell(x, y, z,  13.4, 6.0, 2.2, 3.4, 4.6, 4.2), 1.6);
+
+  // Creases: a local inward recession of the surface.
+  const cleft = CLEFT.depth * Math.exp(-(segDist(x, y, z, CLEFT.ax, CLEFT.ay, CLEFT.az, CLEFT.bx, CLEFT.by, CLEFT.bz) ** 2) / (CLEFT.r * CLEFT.r));
+  const foldL = 1.6 * Math.exp(-(cheekL * cheekL + thL * thL) / 6.0);
+  const foldR = 1.6 * Math.exp(-(cheekR * cheekR + thR * thR) / 6.0);
+  const hipCreaseL = 1.1 * Math.exp(-(segDist(x, y, z, -4.0, 6, 9.2, -12.8, -2, 6.4) ** 2) / 5.0);
+  const hipCreaseR = 1.1 * Math.exp(-(segDist(x, y, z,  4.0, 6, 9.2,  12.8, -2, 6.4) ** 2) / 5.0);
+  const lumbar = 0.9 * Math.exp(-(segDist(x, y, z, 0, 19, -8.2, 0, 11, -9.6) ** 2) / 20.0);
+  const dimpleL = 0.6 * Math.exp(-(segDist(x, y, z, -2.6, 9.0, -9.3, -2.6, 9.0, -9.3) ** 2) / 1.6);
+  const dimpleR = 0.6 * Math.exp(-(segDist(x, y, z,  2.6, 9.0, -9.3,  2.6, 9.0, -9.3) ** 2) / 1.6);
+
+  f += cleft + 0.55 * (foldL + foldR) + 0.5 * (hipCreaseL + hipCreaseR) + 0.45 * lumbar + 0.5 * (dimpleL + dimpleR);
+
+  // Waist and mid-thigh cuts, eased at the rim.
+  f = smax(f, y - Y_WAIST, 0.7);
+  f = smax(f, Y_BOTTOM - y, 0.7);
+
+  const crease = Math.max(cleft, foldL, foldR, hipCreaseL, hipCreaseR, lumbar, dimpleL, dimpleR);
+  return [f, crease];
+}
+
+/* ---------------- Swimwear ---------------- */
+
+// The garment hugs the pelvis and seat, with a cuff around each upper thigh
+// and a clean cut at the waistband.
+function wearRegion(x, y, z) {
+  const seat = ell(x, y, z, 0, 3, -3, 16.4, 12.2, 13.2);
+  const cuffL = ell(x, y, z, -9.2, -4.0, -1.6, 9.6, 8.4, 8.8);
+  const cuffR = ell(x, y, z,  9.2, -4.0, -1.6, 9.6, 8.4, 8.8);
+  let r = smin(seat, cuffL, 2.4);
+  r = smin(r, cuffR, 2.4);
+  r = smax(r, y - 12.6, 0.5);
+  return r;
+}
+
+/* ---------------- Procedural texture ---------------- */
+
+function hash3(x, y, z) {
+  const n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453123;
+  return n - Math.floor(n);
+}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function noise3(x, y, z) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const fx = x - ix, fy = y - iy, fz = z - iz;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+  const uz = fz * fz * (3 - 2 * fz);
+  const a = lerp(hash3(ix, iy, iz), hash3(ix + 1, iy, iz), ux);
+  const b = lerp(hash3(ix, iy + 1, iz), hash3(ix + 1, iy + 1, iz), ux);
+  const c = lerp(hash3(ix, iy, iz + 1), hash3(ix + 1, iy, iz + 1), ux);
+  const d = lerp(hash3(ix, iy + 1, iz + 1), hash3(ix + 1, iy + 1, iz + 1), ux);
+  return lerp(lerp(a, b, uy), lerp(c, d, uy), uz);
+}
+function fbm3(x, y, z, oct) {
+  let v = 0, amp = 1, freq = 1, tot = 0;
+  for (let i = 0; i < oct; i++) {
+    v += amp * noise3(x * freq, y * freq, z * freq);
+    tot += amp; amp *= 0.5; freq *= 2.1;
+  }
+  return v / tot;
+}
+function hash2(x, y) {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+  return n - Math.floor(n);
+}
+function noise2(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uy = fy * fy * (3 - 2 * fy);
+  return lerp(lerp(hash2(ix, iy), hash2(ix + 1, iy), ux),
+              lerp(hash2(ix, iy + 1), hash2(ix + 1, iy + 1), ux), uy);
+}
+function fbm2(x, y, oct) {
+  let v = 0, amp = 1, freq = 1, tot = 0;
+  for (let i = 0; i < oct; i++) {
+    v += amp * noise2(x * freq, y * freq);
+    tot += amp; amp *= 0.5; freq *= 2.0;
+  }
+  return v / tot;
+}
+
+function makeTexture(size, fn) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const v = Math.max(0, Math.min(255, Math.round(fn(x / size, y / size) * 255)));
+      const i = (y * size + x) * 4;
+      img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+const poreMap  = makeTexture(512, (u, v) => 0.30 + 0.70 * fbm2(u * 34, v * 34, 4));
+const roughMap = makeTexture(256, (u, v) => 0.55 + 0.45 * fbm2(u * 12, v * 12, 3));
+const weaveMap = makeTexture(256, (u, v) =>
+  0.5 + 0.26 * Math.sin(u * 2 * Math.PI * 30) + 0.26 * Math.sin(v * 2 * Math.PI * 28) +
+  0.16 * fbm2(u * 18, v * 18, 3));
+poreMap.repeat.set(3, 3);
+roughMap.repeat.set(2, 2);
+weaveMap.repeat.set(3, 3);
+
+/* ---------------- Field sampling ---------------- */
+
+const N = RES;
+const half = RES / 2;
+const bodyVal = new Float32Array(N * N * N);
+const bodyCrease = new Float32Array(N * N * N);
+
+for (let z = 0; z < N; z++) {
+  const pz = (z - half) * CELL;
+  for (let y = 0; y < N; y++) {
+    const py = (y - half) * CELL;
+    const row = (z * N + y) * N;
+    // Cheap rejection: nothing of the body exists outside these bounds.
+    if (py > Y_WAIST + 2 || py < Y_BOTTOM - 2) {
+      for (let x = 0; x < N; x++) bodyVal[row + x] = 40;
+      continue;
+    }
+    for (let x = 0; x < N; x++) {
+      const px = (x - half) * CELL;
+      if (px > 20 || px < -20) { bodyVal[row + x] = 40; continue; }
+      const r = bodyField(px, py, pz);
+      const idx = row + x;
+      bodyVal[idx] = r[0];
+      bodyCrease[idx] = r[1];
+    }
+  }
+}
+
+/* ---------------- Scene ---------------- */
+
+const stage = document.getElementById('stage');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(stage.clientWidth || 400, stage.clientHeight || 400);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 1, 900);
+
+const key = new THREE.DirectionalLight(0xfff3e6, 2.15);
+key.position.set(46, 64, 40);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.bias = -0.0006;
+key.shadow.normalBias = 0.05;
+key.shadow.radius = 6;
+key.shadow.camera.left = -45; key.shadow.camera.right = 45;
+key.shadow.camera.top = 45; key.shadow.camera.bottom = -45;
+key.shadow.camera.near = 1; key.shadow.camera.far = 220;
+key.shadow.camera.updateProjectionMatrix();
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0x9fb6cc, 0.60);
+fill.position.set(-58, 28, 38);
+scene.add(fill);
+
+const rim = new THREE.DirectionalLight(0xb4d0e4, 0.70);
+rim.position.set(-16, 32, -58);
+scene.add(rim);
+
+const bounce = new THREE.DirectionalLight(0xd8c6b4, 0.28);
+bounce.position.set(8, -40, 24);
+scene.add(bounce);
+
+scene.add(new THREE.HemisphereLight(0xe6eef5, 0x2b3036, 0.52));
+
+/* ---------------- Mesh construction ---------------- */
+
+function buildSolid(sdf, material, colorAt) {
+  const mc = new MarchingCubes(RES, material, true, true, 200000);
+  mc.isolation = 0;
+  const field = mc.field;
+  const pal = mc.palette;
+
+  for (let z = 1; z < N - 1; z++) {
+    const pz = (z - half) * CELL;
+    const zrow = z * N * N;
+    for (let y = 1; y < N - 1; y++) {
+      const py = (y - half) * CELL;
+      const row = zrow + y * N;
+      for (let x = 1; x < N - 1; x++) {
+        const px = (x - half) * CELL;
+        const idx = row + x;
+        field[idx] = -sdf(px, py, pz, idx);
+        const col = colorAt(px, py, pz, idx);
+        pal[idx * 3] = col[0];
+        pal[idx * 3 + 1] = col[1];
+        pal[idx * 3 + 2] = col[2];
+      }
+    }
+  }
+
+  mc.update();
+
+  const pos = mc.positionArray;
+  for (let i = 0; i < mc.count * 3; i++) pos[i] *= HALF;
+  mc.geometry.computeBoundingSphere();
+
+  return {
+    mesh: mc,
+    count: mc.count,
+    basePos: Float32Array.from(pos),
+    baseNor: Float32Array.from(mc.normalArray),
+    posAttr: mc.geometry.getAttribute('position'),
+    norAttr: mc.geometry.getAttribute('normal'),
+    active: new Set()
+  };
+}
+
+function skinColor(px, py, pz, idx) {
+  const mottle = fbm3(px * 0.22, py * 0.22, pz * 0.22, 3);
+  const fine = fbm3(px * 1.4, py * 1.4, pz * 1.4, 2);
+  const ao = 1 - Math.min(0.32, 0.12 * bodyCrease[idx]);
+
+  const dGlute = Math.min(
+    Math.hypot(px + GL.x, py - GL.y, pz - GL.z),
+    Math.hypot(px - GL.x, py - GL.y, pz - GL.z)
+  );
+  const warm = 0.030 * Math.max(0, 1 - dGlute / 13);
+  const vertical = 1 + 0.04 * (py / 21);
+
+  const k = ao * vertical * (0.93 + 0.13 * mottle + 0.05 * fine);
+  return [k * (1 + warm), k * (1 - warm * 0.5), k * (1 - warm * 1.15)];
+}
+
+function fabricColor(px, py, pz, idx) {
+  const n = fbm3(px * 0.9, py * 0.9, pz * 0.9, 2);
+  const ao = 1 - Math.min(0.18, 0.06 * bodyCrease[idx]);
+  const k = ao * (0.94 + 0.11 * n);
+  return [k, k * 1.03, k * 1.06];
+}
+
+const skinMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xcaa184,
+  vertexColors: true,
+  roughness: 0.58,
+  roughnessMap: roughMap,
+  metalness: 0.0,
+  specularIntensity: 0.30,
+  sheen: 0.55,
+  sheenRoughness: 0.45,
+  sheenColor: new THREE.Color(0.92, 0.71, 0.58),
+  bumpMap: poreMap,
+  bumpScale: 0.012,
+  flatShading: false
+});
+
+const fabricMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0x1f4a63,
+  vertexColors: true,
+  roughness: 0.72,
+  metalness: 0.0,
+  specularIntensity: 0.22,
+  sheen: 0.30,
+  sheenRoughness: 0.5,
+  sheenColor: new THREE.Color(0.44, 0.60, 0.70),
+  bumpMap: weaveMap,
+  bumpScale: 0.006,
+  flatShading: false
+});
+
+const bodyMesh = buildSolid((px, py, pz, idx) => bodyVal[idx], skinMaterial, skinColor);
+const wearMesh = buildSolid(
+  (px, py, pz, idx) => smax(wearRegion(px, py, pz), bodyVal[idx] - THICK, 0.35),
+  fabricMaterial,
+  fabricColor
+);
+
+bodyMesh.mesh.castShadow = true;
+bodyMesh.mesh.receiveShadow = true;
+wearMesh.mesh.castShadow = true;
+wearMesh.mesh.receiveShadow = true;
+scene.add(bodyMesh.mesh);
+scene.add(wearMesh.mesh);
+
+const box = new THREE.Box3();
+box.union(new THREE.Box3().setFromObject(bodyMesh.mesh));
+box.union(new THREE.Box3().setFromObject(wearMesh.mesh));
+const centre = box.getCenter(new THREE.Vector3());
+const size = box.getSize(new THREE.Vector3());
+bodyMesh.mesh.position.set(-centre.x, -centre.y, -centre.z);
+wearMesh.mesh.position.set(-centre.x, -centre.y, -centre.z);
+const corners = [];
+for (let i = 0; i < 8; i++) {
+  corners.push(new THREE.Vector3(
+    (i & 1 ? 0.5 : -0.5) * size.x,
+    (i & 2 ? 0.5 : -0.5) * size.y,
+    (i & 4 ? 0.5 : -0.5) * size.z
+  ));
+}
+
+/* ---------------- Tissue dynamics ---------------- */
+
+const pokes = [];
+const FINE  = { R: 4.4, k: 625, c: 12.5 };   // 25 rad/s, zeta ~ 0.25
+const BROAD = { R: 11.0, k: 128, c: 6.6 };   // 11.3 rad/s, zeta ~ 0.29
+
+function addPoke(cx, cy, cz, nx, ny, nz, soft) {
+  if (pokes.length >= 6) pokes.shift();
+  pokes.push({
+    cx, cy, cz,
+    nx: -nx, ny: -ny, nz: -nz,
+    fineA: 0, fineV: 30 * soft,
+    broadA: 0, broadV: 9 * soft
+  });
+
+  const cut = BROAD.R + 2;
+  for (const part of [bodyMesh, wearMesh]) {
+    const bp = part.basePos;
+    const ox = part.mesh.position.x, oy = part.mesh.position.y, oz = part.mesh.position.z;
+    for (let i = 0; i < part.count; i += 3) {
+      const dx = bp[i] + ox - cx, dy = bp[i + 1] + oy - cy, dz = bp[i + 2] + oz - cz;
+      if (dx * dx + dy * dy + dz * dz < cut * cut) part.active.add(i);
+    }
+  }
+}
+
+function stepPokes(dt) {
+  let alive = false;
+  for (const p of pokes) {
+    p.fineV += (-FINE.k * p.fineA - FINE.c * p.fineV) * dt;
+    p.fineA += p.fineV * dt;
+    p.broadV += (-BROAD.k * p.broadA - BROAD.c * p.broadV) * dt;
+    p.broadA += p.broadV * dt;
+    if (Math.abs(p.fineA) + Math.abs(p.fineV) + Math.abs(p.broadA) + Math.abs(p.broadV) > 2e-4) {
+      alive = true;
+    }
+  }
+
+  for (const part of [bodyMesh, wearMesh]) {
+    if (part.active.size === 0) continue;
+    const pos = part.posAttr.array;
+    const nor = part.norAttr.array;
+    const bp = part.basePos;
+    const bn = part.baseNor;
+    const ox = part.mesh.position.x, oy = part.mesh.position.y, oz = part.mesh.position.z;
+    const R2F = FINE.R * FINE.R, R2B = BROAD.R * BROAD.R;
+    const reach = (BROAD.R + 1.5) * (BROAD.R + 1.5);
+
+    for (const i3 of part.active) {
+      const px = bp[i3] + ox, py = bp[i3 + 1] + oy, pz = bp[i3 + 2] + oz;
+      let dx = 0, dy = 0, dz = 0, jx = 0, jy = 0, jz = 0;
+
+      for (const p of pokes) {
+        const vx = px - p.cx, vy = py - p.cy, vz = pz - p.cz;
+        const r2 = vx * vx + vy * vy + vz * vz;
+        if (r2 > reach) continue;
+        const r = Math.sqrt(r2) || 1e-6;
+        const rx = vx / r, ry = vy / r, rz = vz / r;
+
+        const wf = Math.exp(-r2 / R2F);
+        const wb = Math.exp(-r2 / R2B);
+        const amp = p.fineA * wf + p.broadA * wb;
+        dx += amp * p.nx; dy += amp * p.ny; dz += amp * p.nz;
+
+        const grad = -(2 * r / R2F) * wf * p.fineA - (2 * r / R2B) * wb * p.broadA;
+        const dot = p.nx * bn[i3] + p.ny * bn[i3 + 1] + p.nz * bn[i3 + 2];
+        jx -= grad * rx * dot;
+        jy -= grad * ry * dot;
+        jz -= grad * rz * dot;
+      }
+
+      pos[i3] = bp[i3] + ox + dx;
+      pos[i3 + 1] = bp[i3 + 1] + oy + dy;
+      pos[i3 + 2] = bp[i3 + 2] + oz + dz;
+
+      if (jx === 0 && jy === 0 && jz === 0) {
+        nor[i3] = bn[i3]; nor[i3 + 1] = bn[i3 + 1]; nor[i3 + 2] = bn[i3 + 2];
+      } else {
+        const nx2 = bn[i3] + jx, ny2 = bn[i3 + 1] + jy, nz2 = bn[i3 + 2] + jz;
+        const l = Math.sqrt(nx2 * nx2 + ny2 * ny2 + nz2 * nz2) || 1;
+        nor[i3] = nx2 / l; nor[i3 + 1] = ny2 / l; nor[i3 + 2] = nz2 / l;
+      }
+    }
+
+    if (!alive) {
+      for (const i3 of part.active) {
+        pos[i3] = bp[i3] + ox;
+        pos[i3 + 1] = bp[i3 + 1] + oy;
+        pos[i3 + 2] = bp[i3 + 2] + oz;
+        nor[i3] = bn[i3]; nor[i3 + 1] = bn[i3 + 1]; nor[i3 + 2] = bn[i3 + 2];
+      }
+      part.active.clear();
+    }
+
+    part.posAttr.needsUpdate = true;
+    part.norAttr.needsUpdate = true;
+  }
+}
+
+/* ---------------- Interaction ---------------- */
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = false;
+controls.enablePan = false;
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.rotateSpeed = 0.9;
+
+let theta = 2.6;   // 0 = front, PI = back
+let phi = 1.32;    // PI/2 = level with the figure
+
+function fitCamera() {
+  const w = stage.clientWidth || 400;
+  const h = stage.clientHeight || 400;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+
+  const fovV = camera.fov * Math.PI / 180;
+  const fovH = 2 * Math.atan(Math.tan(fovV / 2) * camera.aspect);
+
+  // Find a distance that keeps the whole bounding box inside the frame
+  // from any orbit angle.
+  let dist = 0;
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const p = 1.32;
+    const camPos = new THREE.Vector3(
+      Math.sin(p) * Math.sin(a), Math.cos(p), Math.sin(p) * Math.cos(a)
+    ).multiplyScalar(200);
+    const forward = new THREE.Vector3().subVectors(new THREE.Vector3(0, 0, 0), camPos).normalize();
+    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+    const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+    let maxR = 0, maxU = 0;
+    for (const c of corners) {
+      maxR = Math.max(maxR, Math.abs(c.dot(right)));
+      maxU = Math.max(maxU, Math.abs(c.dot(up)));
+    }
+    dist = Math.max(dist, maxU / Math.tan(fovV / 2), maxR / Math.tan(fovH / 2));
+  }
+  dist *= 1.07;
+
+  controls.minDistance = dist;
+  controls.maxDistance = dist;
+  camera.position.set(
+    dist * Math.sin(phi) * Math.sin(theta),
+    dist * Math.cos(phi),
+    dist * Math.sin(phi) * Math.cos(theta)
+  );
+  camera.lookAt(0, 0, 0);
+  controls.target.set(0, 0, 0);
+  controls.update();
+}
+
+let downX = 0, downY = 0, downT = 0, held = false;
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downX = e.clientX; downY = e.clientY; downT = performance.now(); held = true;
+});
+
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!held) return;
+  held = false;
+  if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) return;
+  if (performance.now() - downT > 700) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  const ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+  const hits = ray.intersectObjects([bodyMesh.mesh, wearMesh.mesh], false);
+  if (!hits.length) return;
+  const hit = hits[0];
+  const n = hit.normal.clone().normalize();
+  const px = hit.point.x, py = hit.point.y, pz = hit.point.z;
+
+  let soft;
+  if (wearRegion(px, py, pz) < 0) soft = 0.30;
+  else {
+    const dGlute = Math.min(
+      Math.hypot(px + GL.x, py - GL.y, pz - GL.z),
+      Math.hypot(px - GL.x, py - GL.y, pz - GL.z)
+    );
+    soft = dGlute < 12 ? 1.0 : (py < -3 ? 0.55 : 0.8);
+  }
+  addPoke(px, py, pz, n.x, n.y, n.z, soft);
+});
+
+window.addEventListener('resize', fitCamera);
+
+/* ---------------- Measurement + test hooks ---------------- */
+
+function spanAt(yy) {
+  const gy = Math.round(yy / CELL + half);
+  let minx = 1e9, maxx = -1e9, front = -1e9, back = 1e9;
+  for (let z = 0; z < N; z++) {
+    const pz = (z - half) * CELL;
+    for (let x = 0; x < N; x++) {
+      const px = (x - half) * CELL;
+      if (bodyVal[(z * N + gy) * N + x] < 0) {
+        if (px < minx) minx = px;
+        if (px > maxx) maxx = px;
+        if (pz > front) front = pz;
+        if (pz < back) back = pz;
+      }
+    }
+  }
+  return maxx > -1e9 ? { width: +(maxx - minx).toFixed(1), front: +front.toFixed(1), back: +back.toFixed(1) } : null;
+}
+
+window.__measure = () => {
+  const out = {};
+  for (let yy = 20; yy >= -20; yy -= 4) out["y" + yy] = spanAt(yy);
+  const gaps = [];
+  for (let yy = -4; yy >= -20; yy -= 2) {
+    const gy = Math.round(yy / CELL + half);
+    const gz = Math.round(-1 / CELL + half);
+    let inner = null;
+    for (let x = 0; x < N; x++) {
+      const px = (x - half) * CELL;
+      if (px > 0 && bodyVal[(gz * N + gy) * N + x] < 0) { inner = px; break; }
+    }
+    gaps.push({ y: yy, innerGap: inner === null ? null : +(2 * inner).toFixed(1) });
+  }
+  out.gaps = gaps;
+  const cleftBack = spanAt(-1);
+  out.cleftAtY = cleftBack;
+  return out;
+};
+
+window.__ready = true;
+window.__stats = () => ({
+  bodyTris: bodyMesh.count / 3,
+  wearTris: wearMesh.count / 3,
+  size: [size.x, size.y, size.z],
+  fps
+});
+window.__setAngle = (t, p) => { theta = t; phi = p; fitCamera(); };
+window.__pokeAlong = (t, p) => {
+  theta = t; phi = p; fitCamera();
+  const ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const hits = ray.intersectObjects([bodyMesh.mesh, wearMesh.mesh], false);
+  if (!hits.length) return false;
+  const hit = hits[0];
+  const n = hit.normal.clone().normalize();
+  addPoke(hit.point.x, hit.point.y, hit.point.z, n.x, n.y, n.z, 1.0);
+  return true;
+};
+window.__maxDisplacement = () => {
+  let m = 0;
+  for (const part of [bodyMesh, wearMesh]) {
+    const pos = part.posAttr.array;
+    const bp = part.basePos;
+    const ox = part.mesh.position.x, oy = part.mesh.position.y, oz = part.mesh.position.z;
+    for (const i3 of part.active) {
+      const dx = pos[i3] - bp[i3] - ox;
+      const dy = pos[i3 + 1] - bp[i3 + 1] - oy;
+      const dz = pos[i3 + 2] - bp[i3 + 2] - oz;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d > m) m = d;
+    }
+  }
+  return m;
+};
+
+/* ---------------- Loop ---------------- */
+
+let last = performance.now();
+let fps = 60;
+
+function loop() {
+  const now = performance.now();
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.05) dt = 0.05;
+  if (dt > 0) fps = fps * 0.92 + (1 / dt) * 0.08;
+
+  stepPokes(dt);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+
+fitCamera();
+loop();
+</script>
+</body>
+</html>
