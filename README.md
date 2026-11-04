@@ -161,9 +161,11 @@ You don't need a lab like mine to use any of this. What carries over:
 - **It keeps working on itself, with my approval.** Self-engineering never really ended; a lot of what I build along the way fixes something HAI ran into. HAI takes on real coding work itself: a big job splits into small steps that each have to pass tests, an independent review checks the work, and a job that changed code isn't done until the tests pass on the current code. HAI can propose its own next work but can't put it in its own queue, and nothing reaches production until it passes the full test gate, now over 3,200 tests, and I approve it.
 - **It's my playground too.** I learn here and have fun with it: games, image work and plenty of tinkering for its own sake.
 
-## How it was built
+## How it got here
 
-I built it with Claude and Codex as hired help: they design, review and fix, and the local lab does the daily work. That's the same rule the lab runs by. Frontier models are contractors brought in for specialty work; the AI you use every day lives on your own hardware.
+When I started, the ceiling felt like a small Mistral on an 8 GB card, answering questions about my documents. What changed most since then wasn't the models; it was everything around them. Each round of better plumbing, from measuring every box and putting work where it fits, to making sure the settings actually reach the model, keeping long jobs alive through restarts and giving the assistant a library to read, made room for a bigger, more capable model, and those models then helped build the next round. That's how the same class of card went from running a document bot to running a 35B model that does real work.
+
+I built it with Claude and Codex as hired help: they design, review and fix, and the local lab does the daily work. That's the same rule the lab runs by. Frontier models are contractors brought in for specialty work; the AI you use every day lives on your own hardware. HAI isn't a build in progress anymore: it's the part of the lab my household actually uses every day.
 
 ## More detail
 
