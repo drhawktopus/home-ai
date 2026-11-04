@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" aria-label="Spock's four tiers, from the biggest models to the smallest: the lead tier on Mothership, the 8 GB tier on BigHonker and Softserve, rigby, and the tablet pool, each with the models measured there.">
+<style>
+.node{fill:#f6f6f4;stroke:#1f2328;stroke-width:1.2}.node.decide{stroke:#2563a8;stroke-width:2.2}.node.advise{stroke:#2563a8;stroke-width:1.6;stroke-dasharray:4 3}
+.group{fill:none;stroke:#5f6670;stroke-width:1;stroke-dasharray:5 4}.edge{fill:none;stroke:#1f2328;stroke-width:1.4}.edge.soft{stroke:#5f6670;stroke-dasharray:5 4}
+.t{font:600 13px 'Segoe UI',Helvetica,Arial,sans-serif;fill:#1f2328}.s,.lbl{font:400 11px Consolas,'Courier New',monospace;fill:#5f6670}.grp{font:500 11px Consolas,'Courier New',monospace;fill:#4a4f57;letter-spacing:.08em}
+.m{font:400 12px 'Segoe UI',Helvetica,Arial,sans-serif;fill:#1f2328}.ah{fill:#1f2328}.ah.soft{fill:#5f6670}.bar{fill:#2563a8}.grid{stroke:#e4e2dc;stroke-width:1}
+.val{font:600 12px Consolas,'Courier New',monospace;fill:#1f2328}.col{fill:#f6f6f4;stroke:#e4e2dc;stroke-width:1}.colhead{fill:#f6f6f4;stroke:#1f2328;stroke-width:1.2}
+</style>
+<rect x="0" y="0" width="760" height="330" fill="#ffffff"/>
+<defs>
+          <marker id="arrt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah soft" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <text class="grp" x="10" y="14">SPOCK'S TIERS, BIGGEST MODELS TO SMALLEST</text>
+        <line class="edge soft" x1="10" y1="26" x2="748" y2="26" marker-end="url(#arrt)"/>
+        <!-- lead -->
+        <rect class="colhead" x="10" y="38" width="170" height="50" rx="6"/>
+        <text class="t" x="95" y="59" text-anchor="middle">Lead</text>
+        <text class="s" x="95" y="76" text-anchor="middle">Mothership</text>
+        <rect class="col" x="10" y="94" width="170" height="196" rx="6"/>
+        <text class="m" x="22" y="118">Qwen3.8 Flash-Next 125B</text>
+        <text class="s" x="22" y="132">agentic coding lead</text>
+        <text class="m" x="22" y="156">Qwen 3.8 27B</text>
+        <text class="s" x="22" y="170">quick everyday lead</text>
+        <text class="m" x="22" y="194">Qwen3-Coder 30B</text>
+        <text class="m" x="22" y="216">Qwen3-VL 8B</text>
+        <text class="m" x="22" y="238">FLUX.2 images</text>
+        <text class="s" x="22" y="252">32B fine-tuning</text>
+        <!-- 8 GB -->
+        <rect class="colhead" x="200" y="38" width="170" height="50" rx="6"/>
+        <text class="t" x="285" y="59" text-anchor="middle">8 GB</text>
+        <text class="s" x="285" y="76" text-anchor="middle">BigHonker · Softserve</text>
+        <rect class="col" x="200" y="94" width="170" height="196" rx="6"/>
+        <text class="m" x="212" y="118">Qwen3.6 35B-A3B</text>
+        <text class="s" x="212" y="132">split, card + RAM</text>
+        <text class="m" x="212" y="156">Qwen3 8B · Qwen3.5 9B</text>
+        <text class="m" x="212" y="178">Qwen3-VL 8B</text>
+        <text class="m" x="212" y="200">MiniCPM-V 4.6</text>
+        <text class="m" x="212" y="222">Nemotron Nano 4B</text>
+        <text class="m" x="212" y="246">McCoy, 4B advisor</text>
+        <text class="s" x="212" y="260">kept loaded on Softserve</text>
+        <!-- rigby -->
+        <rect class="colhead" x="390" y="38" width="170" height="50" rx="6"/>
+        <text class="t" x="475" y="59" text-anchor="middle">rigby</text>
+        <text class="s" x="475" y="76" text-anchor="middle">GTX 1060 + CPU</text>
+        <rect class="col" x="390" y="94" width="170" height="196" rx="6"/>
+        <text class="m" x="402" y="118">Qwen3.6 35B-A3B</text>
+        <text class="s" x="402" y="132">1060 + system RAM</text>
+        <text class="m" x="402" y="156">Qwen2.5 7B</text>
+        <text class="m" x="402" y="178">Qwen2.5 1.5B</text>
+        <text class="m" x="402" y="200">embeddings</text>
+        <!-- tablets -->
+        <rect class="colhead" x="580" y="38" width="170" height="50" rx="6"/>
+        <text class="t" x="665" y="59" text-anchor="middle">Tablets</text>
+        <text class="s" x="665" y="76" text-anchor="middle">11 tablets + GT 730</text>
+        <rect class="col" x="580" y="94" width="170" height="196" rx="6"/>
+        <text class="m" x="592" y="118">Qwen3.5 0.8B · 2B</text>
+        <text class="m" x="592" y="140">Qwen2.5-Coder</text>
+        <text class="s" x="592" y="154">0.5B · 1.5B</text>
+        <text class="s" x="592" y="178">small independent</text>
+        <text class="s" x="592" y="192">workers</text>
+        <!-- Tolkien bracket over the last two tiers -->
+        <polyline class="edge soft" points="392,298 392,306 748,306 748,298"/>
+        <text class="lbl" x="570" y="322" text-anchor="middle">Tolkien runs both</text>
+</svg>

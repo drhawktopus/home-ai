@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="530" viewBox="0 0 760 530" role="img" aria-label="A request flows from any device through HAI's web page to Starfleet Command, where Kirk takes it with McCoy's triage and Spock places each step on Mothership, BigHonker or Softserve, or hands it to Tolkien, who assigns rigby's GTX 1060 or the tablet pool. The answer streams back live to the web page.">
+<style>
+.node{fill:#f6f6f4;stroke:#1f2328;stroke-width:1.2}.node.decide{stroke:#2563a8;stroke-width:2.2}.node.advise{stroke:#2563a8;stroke-width:1.6;stroke-dasharray:4 3}
+.group{fill:none;stroke:#5f6670;stroke-width:1;stroke-dasharray:5 4}.edge{fill:none;stroke:#1f2328;stroke-width:1.4}.edge.soft{stroke:#5f6670;stroke-dasharray:5 4}
+.t{font:600 13px 'Segoe UI',Helvetica,Arial,sans-serif;fill:#1f2328}.s,.lbl{font:400 11px Consolas,'Courier New',monospace;fill:#5f6670}.grp{font:500 11px Consolas,'Courier New',monospace;fill:#4a4f57;letter-spacing:.08em}
+.m{font:400 12px 'Segoe UI',Helvetica,Arial,sans-serif;fill:#1f2328}.ah{fill:#1f2328}.ah.soft{fill:#5f6670}.bar{fill:#2563a8}.grid{stroke:#e4e2dc;stroke-width:1}
+.val{font:600 12px Consolas,'Courier New',monospace;fill:#1f2328}.col{fill:#f6f6f4;stroke:#e4e2dc;stroke-width:1}.colhead{fill:#f6f6f4;stroke:#1f2328;stroke-width:1.2}
+</style>
+<rect x="0" y="0" width="760" height="530" fill="#ffffff"/>
+<defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="arrs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="ah soft" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <!-- devices -->
+        <rect class="node" x="170" y="16" width="100" height="34" rx="6"/><text class="t" x="220" y="38" text-anchor="middle">Phone</text>
+        <rect class="node" x="310" y="16" width="100" height="34" rx="6"/><text class="t" x="360" y="38" text-anchor="middle">Laptop</text>
+        <rect class="node" x="450" y="16" width="100" height="34" rx="6"/><text class="t" x="500" y="38" text-anchor="middle">PC</text>
+        <line class="edge" x1="220" y1="50" x2="318" y2="94" marker-end="url(#arr)"/>
+        <line class="edge" x1="360" y1="50" x2="360" y2="94" marker-end="url(#arr)"/>
+        <line class="edge" x1="500" y1="50" x2="402" y2="94" marker-end="url(#arr)"/>
+        <text class="lbl" x="260" y="84" text-anchor="end">same chat, any device</text>
+        <!-- front end -->
+        <rect class="node" x="255" y="96" width="210" height="44" rx="8"/>
+        <text class="t" x="360" y="116" text-anchor="middle">HAI web page</text>
+        <text class="s" x="360" y="131" text-anchor="middle">the front end</text>
+        <!-- request down, answer up: two arrows, one meaning each -->
+        <line class="edge" x1="290" y1="140" x2="176" y2="198" marker-end="url(#arr)"/>
+        <text class="lbl" x="222" y="158" text-anchor="end">request</text>
+        <line class="edge" x1="206" y1="198" x2="320" y2="142" marker-end="url(#arr)"/>
+        <text class="lbl" x="276" y="172">answer streams back live</text>
+        <!-- Starfleet Command -->
+        <rect class="group" x="60" y="182" width="600" height="110" rx="10"/>
+        <text class="grp" x="646" y="198" text-anchor="end">STARFLEET COMMAND</text>
+        <rect class="node decide" x="90" y="200" width="150" height="58" rx="6"/>
+        <text class="t" x="165" y="223" text-anchor="middle">Kirk</text>
+        <text class="s" x="165" y="240" text-anchor="middle">orchestrator</text>
+        <text class="s" x="165" y="253" text-anchor="middle">grounds, splits</text>
+        <rect class="node advise" x="306" y="206" width="108" height="40" rx="6"/>
+        <text class="t" x="360" y="223" text-anchor="middle">McCoy</text>
+        <text class="s" x="360" y="238" text-anchor="middle">advisor model</text>
+        <rect class="node decide" x="480" y="200" width="150" height="58" rx="6"/>
+        <text class="t" x="555" y="223" text-anchor="middle">Spock</text>
+        <text class="s" x="555" y="240" text-anchor="middle">scheduler</text>
+        <text class="s" x="555" y="253" text-anchor="middle">priced menu</text>
+        <line class="edge" x1="306" y1="226" x2="243" y2="226" marker-end="url(#arr)"/>
+        <text class="lbl" x="274" y="219" text-anchor="middle">triage</text>
+        <line class="edge soft" x1="414" y1="226" x2="477" y2="226" marker-end="url(#arrs)"/>
+        <text class="lbl" x="446" y="219" text-anchor="middle">building</text>
+        <line class="edge" x1="240" y1="250" x2="477" y2="250" marker-end="url(#arr)"/>
+        <text class="lbl" x="360" y="268" text-anchor="middle">steps</text>
+        <!-- placement -->
+        <line class="edge" x1="555" y1="258" x2="102" y2="324" marker-end="url(#arr)"/>
+        <line class="edge" x1="555" y1="258" x2="262" y2="324" marker-end="url(#arr)"/>
+        <line class="edge" x1="555" y1="258" x2="422" y2="324" marker-end="url(#arr)"/>
+        <line class="edge" x1="555" y1="258" x2="606" y2="324" marker-end="url(#arr)"/>
+        <line class="edge soft" x1="624" y1="326" x2="572" y2="262" marker-end="url(#arrs)"/>
+        <text class="lbl" x="366" y="316" text-anchor="middle">places</text>
+        <text class="lbl" x="634" y="302">hands back only</text>
+        <text class="lbl" x="634" y="315">if no hardware</text>
+        <rect class="node" x="30" y="326" width="140" height="52" rx="6"/>
+        <text class="t" x="100" y="347" text-anchor="middle">Mothership</text>
+        <text class="s" x="100" y="364" text-anchor="middle">7900 XTX · queue</text>
+        <rect class="node" x="190" y="326" width="140" height="52" rx="6"/>
+        <text class="t" x="260" y="347" text-anchor="middle">BigHonker</text>
+        <text class="s" x="260" y="364" text-anchor="middle">RTX 3070 · queue</text>
+        <rect class="node" x="350" y="326" width="140" height="52" rx="6"/>
+        <text class="t" x="420" y="347" text-anchor="middle">Softserve</text>
+        <text class="s" x="420" y="364" text-anchor="middle">3070 Ti · queue</text>
+        <rect class="node decide" x="530" y="326" width="160" height="52" rx="6"/>
+        <text class="t" x="610" y="347" text-anchor="middle">Tolkien</text>
+        <text class="s" x="610" y="364" text-anchor="middle">rigby's factory</text>
+        <!-- inside rigby's factory -->
+        <line class="edge" x1="610" y1="378" x2="527" y2="424" marker-end="url(#arr)"/>
+        <line class="edge" x1="610" y1="378" x2="650" y2="424" marker-end="url(#arr)"/>
+        <text class="lbl" x="590" y="414" text-anchor="middle">assigns</text>
+        <rect class="node" x="470" y="426" width="110" height="46" rx="6"/>
+        <text class="t" x="525" y="446" text-anchor="middle">rigby</text>
+        <text class="s" x="525" y="461" text-anchor="middle">GTX 1060</text>
+        <rect class="node" x="592" y="426" width="122" height="46" rx="6"/>
+        <text class="t" x="653" y="446" text-anchor="middle">Tablet pool</text>
+        <text class="s" x="653" y="461" text-anchor="middle">11 + GT 730</text>
+        <!-- admin alerts -->
+        <line class="edge soft" x1="100" y1="378" x2="112" y2="424" marker-end="url(#arrs)"/>
+        <text class="lbl" x="122" y="404">job done, guard fired</text>
+        <rect class="node" x="30" y="426" width="170" height="46" rx="6"/>
+        <text class="t" x="115" y="446" text-anchor="middle">Discord</text>
+        <text class="s" x="115" y="461" text-anchor="middle">admin alerts</text>
+        <!-- legend: the encodings repeat, so they are named once -->
+        <rect class="node decide" x="30" y="496" width="22" height="14" rx="3"/>
+        <text class="lbl" x="60" y="507">decides where work goes</text>
+        <rect class="node advise" x="230" y="496" width="22" height="14" rx="3"/>
+        <text class="lbl" x="260" y="507">advises</text>
+        <rect class="node" x="330" y="496" width="22" height="14" rx="3"/>
+        <text class="lbl" x="360" y="507">does the work</text>
+        <line class="edge soft" x1="480" y1="503" x2="512" y2="503"/>
+        <text class="lbl" x="520" y="507">exception or still being built</text>
+</svg>
